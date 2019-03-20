@@ -1,6 +1,8 @@
 package gui;
 
 import java.awt.Dimension;
+
+import log.LogWindow;
 import log.WindowAppend;
 
 import java.awt.Toolkit;

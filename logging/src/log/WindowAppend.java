@@ -3,7 +3,6 @@ package log;
 
 import org.apache.log4j.*;
 import org.apache.log4j.spi.LoggingEvent;
-import gui.LogWindow;
 
 public /*static*/ class WindowAppend extends AppenderSkeleton {
    
