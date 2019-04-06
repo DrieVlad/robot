@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        canvas {
+            border:1px solid #d3005f;
+            background-color: #b5f193;
+        }
+    </style>
+</head>
+<body onload="startGame()">
+<script>
+
+    var myGamePiece;
+    var myGameFood;
+    var img = new Image();
+    img.src = 'sm.png';
+
+
+    function startGame() {
+        myGamePiece = new component(30, 30, 60, 50, 0, "bug");
+        myGameFood = new component(100, 200, 0, 0, "#d3005f", "food");
+        myGameArea.start();
+    }
+
+    var myGameArea = {
+        canvas : document.createElement("canvas"),
+        start : function() {
+            this.canvas.width = 600;
+            this.canvas.height = 400;
+            this.context = this.canvas.getContext("2d");
+            document.body.insertBefore(this.canvas, document.body.childNodes[0]);
+            this.frameNo = 0;
+            this.interval = setInterval(updateGameArea, 20);
+        },
+        clear : function() {
+            this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        }
+    }
+
+    function component(x, y, width, height, color, type) {
+        this.type = type;
+        this.width = width;
+        this.height = height;
+        this.x = x;
+        this.y = y;
+        this.update = function() {
+            ctx = myGameArea.context;
+            if (this.type == "bug") {
+                ctx.drawImage(img, this.x, this.y, this.width, this.height);
+            }
+            else {
+                ctx.arc(this.x, this.y, 5, 0, Math.PI * 2, false);
+                ctx.fillStyle = color;
+                ctx.fill()
+            }
+        }
+        this.newPos = function() {
+            if (this.type == "bug"){
+                //this.transform.scale(1, -1);
+                this.x += 1;
+                this.y += 1;
+            }
+        }
+    }
+
+    function updateGameArea() {
+        myGameArea.clear();
+        myGamePiece.newPos();
+        myGamePiece.update();
+        myGameFood.newPos();
+        myGameFood.update();
+    }
+
+</script>
+</body>
+</html>
