@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Hello WebSocket</title>
+    <link href="/webjars/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/main.css" rel="stylesheet">
+    <script src="/webjars/jquery/jquery.min.js"></script>
+    <script src="/webjars/sockjs-client/sockjs.min.js"></script>
+    <script src="/webjars/stomp-websocket/stomp.min.js"></script>
+    <script src="/app.js"></script>
+
+    <style>
+        canvas {
+            border:1px solid #d3005f;
+            background-color: #f1e24e;
+        }
+    </style>
+
+</head>
+<body  onload="startGame()">
+
+    <div class="row">
+        <div class="col-md-12">
+            <table id="conversation" class="table table-striped">
+                <thead>
+                <tr>
+                    <th>Greetings</th>
+                </tr>
+                </thead>
+                <tbody id="greetings">
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    var stompClient = null;
+    var myGamePiece;
+    var myGameFood;
+    var TO_RADIANS = Math.PI/180;
+
+    var imgMain = new Image();
+    imgMain.src = 'sm.png';
+    var imgPiece = new Image();
+    imgPiece.src = 'honey.png';
+
+    var myGameArea = {
+        canvas : document.createElement("canvas"),
+        start : function() {
+            this.canvas.width = 800;
+            this.canvas.height = 500;
+            this.context = this.canvas.getContext("2d");
+            document.body.insertBefore(this.canvas, document.body.childNodes[0]);
+            this.frameNo = 0;
+            this.interval = setInterval(updateGameArea, 20);
+            var mouse = { x:0, y:0};
+            this.canvas.addEventListener("mousedown", function(e){
+
+                mouse.x = e.pageX - this.offsetLeft;
+                mouse.y = e.pageY - this.offsetTop;
+                myGameFood.newPos(mouse.x, mouse.y);
+                s = mouse.x + " " + mouse.y;
+                sendName(s);
+                console.log(mouse.x);
+            });
+        },
+        clear : function() {
+            this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        }
+
+    };
+
+    function startGame() {
+        connect();
+        myGamePiece = new component(30, 30, 50, 50, 0, "bug", 0);
+        myGameFood = new component(100, 200, 20, 20, "food", 0);
+        myGameArea.start();
+    }
+
+    function component(x, y, width, height, color, type, angle) {
+        this.angle = angle;
+        this.type = type;
+        this.width = width;
+        this.height = height;
+        this.x = x;
+        this.y = y;
+        this.update = function() {
+            ctx = myGameArea.context;
+            if (type == 'bug') {
+                drawRotatedImage(imgMain, this.x, this.y, this.angle, this.width, this.height);
+
+            }
+            else {
+                ctx.drawImage(imgPiece, this.x, this.y, this.width, this.height);
+            }
+        };
+        this.newPos = function(x, y) {
+            if (this.type == "bug"){
+                //ВОТ ЗДЕСЬ НАДО ДЕЛАТЬ ОБНОВЛЕНИЯ (ЛИБО КАК ПАРАМЕТРЫ В МЕТОД ДАВАТЬ), ТИПА ТУТ КООРДИНАТЫ И УГОЛ
+                //БОЛЬШЕ НИКУДА ПИХАТЬ ОБНОВЛЕНИЯ НЕ НАДО
+                this.angle += 5;
+                this.x += 0.1;
+                this.y += 0.1;
+            }
+            else {
+                this.x = x;
+                this.y = y;
+            }
+        }
+    }
+
+    function drawRotatedImage(image, x, y, angle, width, height) {
+
+        myGameArea.context.save();
+        myGameArea.context.translate(x, y);
+        myGameArea.context.rotate(angle * TO_RADIANS);
+        myGameArea.context.drawImage(image, -(width/2), -(height/2), width, height);
+        myGameArea.context.restore();
+    }
+
+
+function setConnected(connected) {
+    $("#connect").prop("disabled", connected);
+    if (connected) {
+        $("#conversation").show();
+    }
+    $("#greetings").html("");
+}
+
+function connect() {
+    var socket = new SockJS('/gs-guide-websocket');
+    stompClient = Stomp.over(socket);
+    stompClient.connect({}, function (frame) {
+        setConnected(true);
+        console.log('Connected: ' + frame);
+        stompClient.subscribe('/topic/greetings', function (greeting) {
+            showGreeting(JSON.parse(greeting.body).content);
+        });
+    });
+}
+
+function sendName(s) {
+    stompClient.send("/app/hello", {}, JSON.stringify({'name': s}));
+}
+
+function showGreeting(message) {
+    $("#greetings").append("<tr><td>" + message + "</td></tr>")
+    ;
+}
+
+    function updateGameArea() {
+        myGameArea.clear();
+        myGamePiece.newPos();
+        myGamePiece.update();
+        myGameFood.update();
+    }
+</script>
+
+</body>
+</html>

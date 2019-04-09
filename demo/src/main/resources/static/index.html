@@ -12,30 +12,12 @@
     <style>
         canvas {
             border:1px solid #d3005f;
-            background-color: #b5f193;
+            background-color: #f1e24e;
         }
     </style>
 
 </head>
 <body  onload="startGame()">
-<noscript><h2 style="color: #ff0000">Seems your browser doesn't support Javascript! Websocket relies on Javascript being
-    enabled. Please enable
-    Javascript and reload this page!</h2></noscript>
-<div id="main-content" class="container">
-    <div class="row">
-        <div class="col-md-6">
-            <form class="form-inline">
-                <div class="form-group">
-                    <label for="connect">WebGame</label>
-                    <button id="connect" class="btn btn-default" type="submit">Start</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-
-    <div id="app"> {{message}} </div>
-
 
     <div class="row">
         <div class="col-md-12">
@@ -52,23 +34,22 @@
     </div>
 </div>
 
-
 <script>
+    var stompClient = null;
     var myGamePiece;
     var myGameFood;
-    var img = new Image();
-    img.src = 'sm.png';
-    function startGame() {
-        connect()
-        myGamePiece = new component(30, 30, 60, 50, 0, "bug");
-        myGameFood = new component(100, 200, 0, 0, "#d3005f", "food");
-        myGameArea.start();
-    }
+    var TO_RADIANS = Math.PI/180;
+
+    var imgMain = new Image();
+    imgMain.src = 'sm.png';
+    var imgPiece = new Image();
+    imgPiece.src = 'honey.png';
+
     var myGameArea = {
         canvas : document.createElement("canvas"),
         start : function() {
-            this.canvas.width = 600;
-            this.canvas.height = 400;
+            this.canvas.width = 800;
+            this.canvas.height = 500;
             this.context = this.canvas.getContext("2d");
             document.body.insertBefore(this.canvas, document.body.childNodes[0]);
             this.frameNo = 0;
@@ -78,7 +59,8 @@
 
                 mouse.x = e.pageX - this.offsetLeft;
                 mouse.y = e.pageY - this.offsetTop;
-                s = "x = " + mouse.x + " " + "y = " + mouse.y;
+                myGameFood.newPos(mouse.x, mouse.y);
+                s = mouse.x + " " + mouse.y;
                 sendName(s);
                 console.log(mouse.x);
             });
@@ -87,8 +69,17 @@
             this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
         }
 
+    };
+
+    function startGame() {
+        connect();
+        myGamePiece = new component(30, 30, 50, 50, 0, "bug", 0);
+        myGameFood = new component(100, 200, 20, 20, "food", 0);
+        myGameArea.start();
     }
-    function component(x, y, width, height, color, type) {
+
+    function component(x, y, width, height, color, type, angle) {
+        this.angle = angle;
         this.type = type;
         this.width = width;
         this.height = height;
@@ -96,35 +87,44 @@
         this.y = y;
         this.update = function() {
             ctx = myGameArea.context;
-            if (this.type == "bug") {
-                ctx.drawImage(img, this.x, this.y, this.width, this.height);
+            if (type == 'bug') {
+                drawRotatedImage(imgMain, this.x, this.y, this.angle, this.width, this.height);
+
             }
             else {
-                ctx.arc(this.x, this.y, 5, 0, Math.PI * 2, false);
-                ctx.fillStyle = color;
-                ctx.fill()
+                ctx.drawImage(imgPiece, this.x, this.y, this.width, this.height);
             }
-        }
-        this.newPos = function() {
+        };
+        this.newPos = function(x, y) {
             if (this.type == "bug"){
-                //this.transform.scale(1, -1);
-                this.x += 0;
-                this.y += 0;
+                //ВОТ ЗДЕСЬ НАДО ДЕЛАТЬ ОБНОВЛЕНИЯ (ЛИБО КАК ПАРАМЕТРЫ В МЕТОД ДАВАТЬ), ТИПА ТУТ КООРДИНАТЫ И УГОЛ
+                //БОЛЬШЕ НИКУДА ПИХАТЬ ОБНОВЛЕНИЯ НЕ НАДО
+                //ТО ЕСТЬ ВОЗВРАЩАТЬ НАДО: m_robotPositionX, m_robotPositionY, m_robotDirection (ПОЛЯ ИЗ GameVisualizer)
+                this.angle += 5;
+                this.x += 0.1;
+                this.y += 0.1;
+            }
+            else {
+                this.x = x;
+                this.y = y;
             }
         }
     }
 
+    function drawRotatedImage(image, x, y, angle, width, height) {
 
-    var stompClient = null;
+        myGameArea.context.save();
+        myGameArea.context.translate(x, y);
+        myGameArea.context.rotate(angle * TO_RADIANS);
+        myGameArea.context.drawImage(image, -(width/2), -(height/2), width, height);
+        myGameArea.context.restore();
+    }
+
 
 function setConnected(connected) {
     $("#connect").prop("disabled", connected);
-    $("#disconnect").prop("disabled", !connected);
     if (connected) {
         $("#conversation").show();
-    }
-    else {
-        $("#conversation").hide();
     }
     $("#greetings").html("");
 }
@@ -150,14 +150,10 @@ function showGreeting(message) {
     ;
 }
 
-
-
-
     function updateGameArea() {
         myGameArea.clear();
         myGamePiece.newPos();
         myGamePiece.update();
-        myGameFood.newPos();
         myGameFood.update();
     }
 </script>
