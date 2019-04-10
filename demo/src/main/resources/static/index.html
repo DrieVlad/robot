@@ -19,32 +19,37 @@
 </head>
 <body  onload="startGame()">
 
-    <div class="row">
-        <div class="col-md-12">
-            <table id="conversation" class="table table-striped">
-                <thead>
-                <tr>
-                    <th>Greetings</th>
-                </tr>
-                </thead>
-                <tbody id="greetings">
-                </tbody>
-            </table>
-        </div>
+<div class="row">
+    <div class="col-md-12">
+        <table id="conversation" class="table table-striped">
+            <thead>
+            <tr>
+                <th>Greetings</th>
+            </tr>
+            </thead>
+            <tbody id="greetings">
+            </tbody>
+        </table>
     </div>
+</div>
 </div>
 
 <script>
+    var mes;
+    var P_x;
+    var P_y;
+    var M_x;
+    var M_y;
+    var s_bef = "";
+    var check = 0;
     var stompClient = null;
     var myGamePiece;
     var myGameFood;
     var TO_RADIANS = Math.PI/180;
-
     var imgMain = new Image();
     imgMain.src = 'sm.png';
     var imgPiece = new Image();
     imgPiece.src = 'honey.png';
-
     var myGameArea = {
         canvas : document.createElement("canvas"),
         start : function() {
@@ -56,28 +61,29 @@
             this.interval = setInterval(updateGameArea, 20);
             var mouse = { x:0, y:0};
             this.canvas.addEventListener("mousedown", function(e){
-
                 mouse.x = e.pageX - this.offsetLeft;
                 mouse.y = e.pageY - this.offsetTop;
+                check = 1;
                 myGameFood.newPos(mouse.x, mouse.y);
-                s = mouse.x + " " + mouse.y;
-                sendName(s);
-                console.log(mouse.x);
+                s = "";
+                console.log( myGamePiece.x)
+                P_x = myGamePiece.x;
+                P_y = myGamePiece.y;
+                M_x = mouse.x;
+                M_y = mouse.y;
+
             });
         },
         clear : function() {
             this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
         }
-
     };
-
     function startGame() {
         connect();
-        myGamePiece = new component(30, 30, 50, 50, 0, "bug", 0);
-        myGameFood = new component(100, 200, 20, 20, "food", 0);
+        myGamePiece = new component(100, 100, 50, 50, 0, "bug", 0);
+        myGameFood = new component(150, 100, 20, 20, "food", 0);
         myGameArea.start();
     }
-
     function component(x, y, width, height, color, type, angle) {
         this.angle = angle;
         this.type = type;
@@ -89,7 +95,6 @@
             ctx = myGameArea.context;
             if (type == 'bug') {
                 drawRotatedImage(imgMain, this.x, this.y, this.angle, this.width, this.height);
-
             }
             else {
                 ctx.drawImage(imgPiece, this.x, this.y, this.width, this.height);
@@ -100,9 +105,29 @@
                 //ВОТ ЗДЕСЬ НАДО ДЕЛАТЬ ОБНОВЛЕНИЯ (ЛИБО КАК ПАРАМЕТРЫ В МЕТОД ДАВАТЬ), ТИПА ТУТ КООРДИНАТЫ И УГОЛ
                 //БОЛЬШЕ НИКУДА ПИХАТЬ ОБНОВЛЕНИЯ НЕ НАДО
                 //ТО ЕСТЬ ВОЗВРАЩАТЬ НАДО: m_robotPositionX, m_robotPositionY, m_robotDirection (ПОЛЯ ИЗ GameVisualizer)
-                this.angle += 5;
-                this.x += 0.1;
-                this.y += 0.1;
+
+                s = M_x + ";" + M_y + ";" + P_x + ";" + P_y;
+
+
+                sendName(s);
+                //s_bef = s;
+                //ms = 1000;
+                //ms += new Date().getTime();
+                //while (new Date() < ms){}
+
+                arr = mes.split(";");
+                if (check == 1)
+                {
+                    this.angle = arr[2];
+                    this.x = arr[0];
+                    this.y = arr[1];
+                }
+                else
+                {
+                    this.angle += 0;
+                    this.x += 0;
+                    this.y += 0;
+                }
             }
             else {
                 this.x = x;
@@ -110,17 +135,13 @@
             }
         }
     }
-
     function drawRotatedImage(image, x, y, angle, width, height) {
-
         myGameArea.context.save();
         myGameArea.context.translate(x, y);
         myGameArea.context.rotate(angle * TO_RADIANS);
         myGameArea.context.drawImage(image, -(width/2), -(height/2), width, height);
         myGameArea.context.restore();
     }
-
-
 function setConnected(connected) {
     $("#connect").prop("disabled", connected);
     if (connected) {
@@ -128,7 +149,6 @@ function setConnected(connected) {
     }
     $("#greetings").html("");
 }
-
 function connect() {
     var socket = new SockJS('/gs-guide-websocket');
     stompClient = Stomp.over(socket);
@@ -140,16 +160,20 @@ function connect() {
         });
     });
 }
-
 function sendName(s) {
     stompClient.send("/app/hello", {}, JSON.stringify({'name': s}));
 }
-
-function showGreeting(message) {
-    $("#greetings").append("<tr><td>" + message + "</td></tr>")
-    ;
+function round(value, decimals) {
+ return Number(Math.round(value+'e'+decimals)+'e-'+decimals);
+}
+function round(value, decimals) {
+    return Number(Math.round(value+'e'+decimals)+'e-'+decimals);
 }
 
+function showGreeting(message) {
+    $("#greetings").append("<tr><td>" + message + "</td></tr>");
+    mes = message;
+}
     function updateGameArea() {
         myGameArea.clear();
         myGamePiece.newPos();
